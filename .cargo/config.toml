@@ -1,0 +1,10 @@
+[target.x86_64-unknown-linux-musl]
+linker = "x86_64-linux-musl-gcc"
+
+# Default build target set to musl for Linux deployment
+# For local development on Mac/Windows, override with:
+# cargo build --target <your-native-target>
+# Or comment out the [build] section below
+
+# [build]
+# target = "x86_64-unknown-linux-musl"

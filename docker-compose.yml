@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  upnotif:
+    build: .
+    image: upnotif:latest
+    container_name: upnotif-monitor
+    restart: unless-stopped
+    env_file:
+      - .env  # Create .env file from .env.example
+    environment:
+      RUST_LOG: "info"
+    # Alternative: specify environment variables directly
+    # environment:
+    #   UPNOTIF_URLS: "https://example.com,https://google.com,https://github.com"
+    #   UPNOTIF_SLACK_WEBHOOK: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+    #   UPNOTIF_INTERVAL_SECONDS: "60"
+    #   RUST_LOG: "info"
+    # No volumes needed - the binary is self-contained
+    # No ports needed - this is a monitoring service that only makes outbound requests
