@@ -4,7 +4,7 @@ FROM rust:1.75-alpine AS builder
 RUN apk add --no-cache musl-dev
 
 WORKDIR /app
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 COPY src/ ./src/
 
 RUN cargo build --release --target x86_64-unknown-linux-musl
