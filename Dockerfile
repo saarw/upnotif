@@ -4,10 +4,10 @@ FROM rust:1.82-alpine AS builder
 RUN apk add --no-cache musl-dev
 
 WORKDIR /app
-COPY Cargo.toml ./
+COPY Cargo.toml Cargo.lock ./
 COPY src/ ./src/
 
-RUN cargo build --release --target x86_64-unknown-linux-musl
+RUN cargo build --release --locked --target x86_64-unknown-linux-musl
 
 # Runtime stage
 FROM scratch
