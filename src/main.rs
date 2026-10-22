@@ -26,6 +26,7 @@ struct Config {
     urls: Vec<String>,
     slack_webhook: String,
     interval_seconds: u64,
+    failure_threshold: u32,
     test_mode: bool,
 }
 
@@ -41,6 +42,13 @@ impl Config {
             .unwrap_or_else(|_| "60".to_string())
             .parse::<u64>()
             .map_err(|_| "UPNOTIF_INTERVAL_SECONDS must be a valid number")?;
+
+        let failure_threshold = env::var("UPNOTIF_FAILURE_THRESHOLD")
+            .unwrap_or_else(|_| "3".to_string())
+            .parse::<u32>()
+            .ok()
+            .filter(|&n| n >= 1)
+            .ok_or("UPNOTIF_FAILURE_THRESHOLD must be a number of at least 1")?;
 
         let urls: Vec<String> = urls_str
             .split(',')
@@ -70,6 +78,7 @@ impl Config {
             urls,
             slack_webhook,
             interval_seconds,
+            failure_threshold,
             test_mode,
         })
     }
@@ -79,6 +88,7 @@ struct UrlMonitor {
     client: Client,
     config: Config,
     status_map: HashMap<String, UrlStatus>,
+    failure_counts: HashMap<String, u32>,
 }
 
 impl UrlMonitor {
@@ -92,6 +102,7 @@ impl UrlMonitor {
             client,
             config,
             status_map: HashMap::new(),
+            failure_counts: HashMap::new(),
         }
     }
 
@@ -138,8 +149,27 @@ impl UrlMonitor {
         let mut results = Vec::new();
 
         for url in &self.config.urls {
-            let current_status = self.check_url_status(url).await;
+            let check_status = self.check_url_status(url).await;
             let previous_status = self.status_map.get(url);
+
+            // Only report DOWN after enough consecutive failed checks; until then
+            // keep the previous status (assume UP if there is none yet).
+            let failures = self.failure_counts.entry(url.clone()).or_insert(0);
+            let current_status = if check_status == UrlStatus::Up {
+                *failures = 0;
+                UrlStatus::Up
+            } else {
+                *failures += 1;
+                if *failures >= self.config.failure_threshold {
+                    UrlStatus::Down
+                } else {
+                    info!(
+                        "Check failed for {} ({}/{} attempts)",
+                        url, failures, self.config.failure_threshold
+                    );
+                    previous_status.cloned().unwrap_or(UrlStatus::Up)
+                }
+            };
             let status_changed = previous_status.map_or(true, |prev| prev != &current_status);
 
             results.push((url.clone(), current_status.clone(), status_changed));
@@ -156,11 +186,15 @@ impl UrlMonitor {
         let mut status_lines = Vec::new();
 
         for (url, status, _) in results {
-            let emoji = match status {
-                UrlStatus::Up => "✅",
-                UrlStatus::Down => "❌",
+            let failures = self.failure_counts.get(&url).copied().unwrap_or(0);
+            let line = match status {
+                UrlStatus::Up if failures > 0 => format!(
+                    "⚠️ {} failed its check ({}/{} attempts before DOWN)",
+                    url, failures, self.config.failure_threshold
+                ),
+                UrlStatus::Up => format!("✅ {} is {}", url, status),
+                UrlStatus::Down => format!("❌ {} is {}", url, status),
             };
-            let line = format!("{} {} is {}", emoji, url, status);
             info!("{}", line);
             status_lines.push(line);
         }
@@ -248,6 +282,7 @@ async fn main() {
     info!("Configuration loaded successfully");
     info!("URLs to monitor: {:?}", config.urls);
     info!("Check interval: {} seconds", config.interval_seconds);
+    info!("Failed attempts before DOWN: {}", config.failure_threshold);
     if config.test_mode {
         info!("Running in TEST MODE - notifications will be logged to console instead of sent to Slack");
     }

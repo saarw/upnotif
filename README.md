@@ -16,6 +16,7 @@ A lightweight Rust application that monitors URL uptime and sends Slack notifica
 - `UPNOTIF_URLS` - Comma-separated list of URLs to monitor (required)
 - `UPNOTIF_SLACK_WEBHOOK` - Slack webhook URL for notifications, or "test" for console output (required)
 - `UPNOTIF_INTERVAL_SECONDS` - Check interval in seconds (optional, defaults to 60)
+- `UPNOTIF_FAILURE_THRESHOLD` - Number of consecutive failed checks before a URL is reported as down (optional, defaults to 3). A single successful check marks it as up again.
 
 ### Test Mode
 

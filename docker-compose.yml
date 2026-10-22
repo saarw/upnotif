@@ -13,6 +13,7 @@ services:
     #   UPNOTIF_URLS: "https://example.com,https://google.com,https://github.com"
     #   UPNOTIF_SLACK_WEBHOOK: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
     #   UPNOTIF_INTERVAL_SECONDS: "60"
+    #   UPNOTIF_FAILURE_THRESHOLD: "3"
     #   RUST_LOG: "info"
     # No volumes needed - the binary is self-contained
     # No ports needed - this is a monitoring service that only makes outbound requests
